@@ -1,24 +1,25 @@
+# ----------------------------
+# External Load balancer for reverse proxy nginx
+#---------------------------------
+
 resource "aws_lb" "ext-alb" {
-  name     = "ext-alb"
+  name     = var.name
   internal = false
-  security_groups = [
-    aws_security_group.ext-alb-sg.id,
-  ]
+  security_groups = [var.public-sg]
 
   subnets = [
-    aws_subnet.public[0].id,
-    aws_subnet.public[1].id
-  ]
+    var.public-sbn-1,
+    var.public-sbn-2, ]
 
   tags = merge(
     var.tags,
     {
-      Name = "ACS-ext-alb"
+      Name = var.name
     },
   )
 
-  ip_address_type    = "ipv4"
-  load_balancer_type = "application"
+  ip_address_type    = var.ip_address_type
+  load_balancer_type = var.load_balancer_type
 }
 
 # Creating a Target Group for the Nginx server which informs the ALB where to route the traffic:
@@ -36,7 +37,7 @@ resource "aws_lb_target_group" "nginx-tgt" {
   port        = 443
   protocol    = "HTTPS"
   target_type = "instance"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = var.vpc_id
 }
 
 # Creating a listener for the Nginx target group:
@@ -53,38 +54,28 @@ resource "aws_lb_listener" "nginx-listner" {
   }
 }
 
-# This codes  outputs the DNS name of the external load balancer to print them on the screen
- output "alb_dns_name" {
-   value = aws_lb.ext-alb.dns_name
- }
-
- output "alb_target_group_arn" {
-   value = aws_lb_target_group.nginx-tgt.arn
- }
 
 # In the alb.tf file, entering the following codes to create an internal Application Load Balancer:
 # Internal Load Balancers for webservers
 resource "aws_lb" "ialb" {
   name     = "ialb"
   internal = true
-  security_groups = [
-    aws_security_group.int-alb-sg.id,
-  ]
+  security_groups = [var.private-sg]
+   
 
   subnets = [
-    aws_subnet.private[0].id,
-    aws_subnet.private[1].id
-  ]
+    var.private-sbn-1,
+    var.private-sbn-2, ]
 
   tags = merge(
     var.tags,
     {
-      Name = "ACS-int-alb"
+      Name = var.name
     },
   )
 
-  ip_address_type    = "ipv4"
-  load_balancer_type = "application"
+  ip_address_type    = var.ip_address_type
+  load_balancer_type = var.load_balancer_type
 }
 
 # Creating the Target Group for the Wordpress and Tooling server to inform the ALB where to route the traffic:
@@ -104,7 +95,7 @@ resource "aws_lb_target_group" "wordpress-tgt" {
   port        = 443
   protocol    = "HTTPS"
   target_type = "instance"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = var.vpc_id
 }
 
 # --- target group for tooling -------
@@ -123,7 +114,7 @@ resource "aws_lb_target_group" "tooling-tgt" {
   port        = 443
   protocol    = "HTTPS"
   target_type = "instance"
-  vpc_id      = aws_vpc.main.id
+  vpc_id      = var.vpc_id
 }
 
 # Creating a listener for these Target Group:
